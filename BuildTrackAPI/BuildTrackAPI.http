@@ -1,0 +1,6 @@
+@BuildTrackAPI_HostAddress = http://localhost:5271
+
+GET {{BuildTrackAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
