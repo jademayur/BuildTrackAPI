@@ -12,6 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserCompanyService, UserCompanyService>();
 builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
