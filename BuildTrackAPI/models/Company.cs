@@ -40,6 +40,8 @@ namespace BuildTrackAPI.models
             public int? CreatedBy { get; set; }
             public DateTime? UpdatedDate { get; set; }
             public int? UpdatedBy { get; set; }
-        }
+
+             public ICollection<UserCompany> UserCompanies { get; set; }
+    }
    
 }

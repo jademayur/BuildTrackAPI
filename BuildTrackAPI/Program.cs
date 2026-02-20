@@ -10,6 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add services to the container.
 
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
