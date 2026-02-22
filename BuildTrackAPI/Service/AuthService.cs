@@ -1,10 +1,11 @@
 ﻿using BuildTrackAPI.Data;
 using BuildTrackAPI.DTOs;
+using BuildTrackAPI.DTOs.CompanySelect;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 
 namespace BuildTrackAPI.Service
 {
@@ -19,7 +20,7 @@ namespace BuildTrackAPI.Service
             _configuration = configuration;
         }
 
-        public async Task<string> LoginAsync(LoginDto dto)
+        public async Task<object> LoginAsync(LoginDto dto)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(x => x.Email == dto.Email && x.IsActive);
@@ -30,16 +31,58 @@ namespace BuildTrackAPI.Service
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 return null;
 
-            // For now simple role example
-            var role = "Admin";
+            // If Platform Admin
+            if (user.IsPlatformAdmin)
+            {
+                return new
+                {
+                    userId = user.UserId,
+                    isPlatformAdmin = true,
+                    companies = new List<object>()
+                };
+            }
+
+            // Get assigned companies
+            var companies = await _context.UserCompanies
+                .Where(x => x.UserId == user.UserId && x.IsActive)
+                .Include(x => x.Company)
+                .Select(x => new
+                {
+                    x.CompanyId,
+                    x.Company.CompanyName
+                })
+                .ToListAsync();
+
+            return new
+            {
+                userId = user.UserId,
+                isPlatformAdmin = false,
+                companies
+            };
+        }
+
+        public async Task<string> GenerateTokenAsync(CompanySelectionDto dto)
+        {
+            var mapping = await _context.UserCompanies
+                .Include(x => x.Role)
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == dto.UserId &&
+                    x.CompanyId == dto.CompanyId &&
+                    x.IsActive);
+
+            if (mapping == null)
+                return null;
 
             var claims = new List<Claim>
-        {
-            new Claim("UserId", user.UserId.ToString()),
-            new Claim(ClaimTypes.Name, user.FullName),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, role)
-        };
+    {
+        new Claim("UserId", mapping.UserId.ToString()),
+        new Claim("CompanyId", mapping.CompanyId.ToString()),
+        new Claim(ClaimTypes.Name, mapping.User.FullName),
+        new Claim(ClaimTypes.Email, mapping.User.Email),
+        new Claim(ClaimTypes.Role, mapping.Role.RoleName),
+        new Claim("IsPlatformAdmin", mapping.User.IsPlatformAdmin.ToString())
+    };
 
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
